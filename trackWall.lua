@@ -67,8 +67,9 @@ function alignVehicle()
   else
     vehicle:set_steering_and_throttle(0.0, 0.0)
     gcs:send_text(6, "Vehicle is Aligned")
-    param:set('TRACK_DIST', actualDist)
-    offsetDist = actualDist
+    -- param:set('TRACK_DIST', actualDist)
+    --offsetDist = actualDist
+    offsetDist = param:get('TRACK_DIST')
     gcs:send_text(6, "Tracking Wall at: "..tostring(offsetDist))
     return update, 5000
   end
@@ -85,6 +86,7 @@ function limitSteer(input, limit)
 end
 
 function updateParams()
+  offsetDist = param:get('TRACK_DIST')
   pGain = param:get('TRACK_P')
   cruiseMax = param:get('TRACK_SP')
   limSteer = param:get('TRACK_STR')
