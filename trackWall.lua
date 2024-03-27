@@ -66,8 +66,8 @@ end
 function alignVehicle()
   dist1 = ((rangefinder:distance_cm_orient(7)+rng1_offset)/100)*m2ft
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
-  dist1 = offsetDist
-  dist2 = offsetDist 
+  --dist1 = offsetDist
+  --dist2 = offsetDist 
   alignError = dist2 - dist1
   actualDist = averageDist(dist1, dist2)
   if math.abs(alignError) > (alignThresh/100)*m2ft then
