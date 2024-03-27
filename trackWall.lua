@@ -66,8 +66,8 @@ end
 function alignVehicle()
   dist1 = ((rangefinder:distance_cm_orient(7)+rng1_offset)/100)*m2ft
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
-  --dist1 = offsetDist
-  --dist2 = offsetDist 
+  dist1 = offsetDist
+  dist2 = offsetDist 
   alignError = dist2 - dist1
   actualDist = averageDist(dist1, dist2)
   if math.abs(alignError) > (alignThresh/100)*m2ft then
@@ -139,9 +139,12 @@ function update()
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
   --dist1 = offsetDist
   --dist2 = offsetDist 
-  distFwd = ((rangefinder:distance_cm_orient(0))/100)*m2ft
-  ---distFwd = avoidThresh + 1
 
+  --distFwd = ((rangefinder:distance_cm_orient(0))/100)*m2ft
+  --distBack = ((rangefinder:distance_cm_orient(4))/100)*m2ft
+  distFwd = avoidThresh + 1
+  distBack = avoidThresh + 1
+  
   if arming:is_armed() == false then
     gcs:send_text(6, "RNG FL: " .. tostring((dist1)).." RNG BL: "..tostring((dist2)).." RNG BACK: "..tostring((distBack)).." RNG FWD: "..tostring((distFwd)))
   end
@@ -157,7 +160,7 @@ function update()
     dError = (error - errorOld)/(updateRate/1000)
     steeringOut = limitSteer(pGain*error + dGain*dError, limSteer)
 
-    if (cruiseSpeed > 0 and distFwd > avoidThresh) or (cruiseSpeed < 0) then
+    if (cruiseSpeed > 0 and distFwd > avoidThresh) or (cruiseSpeed < 0 and distBack > avoidThresh) then
       gcs:send_text(6, "Steering Out " .. tostring(steeringOut) .. " P: " .. tostring(pGain*error).." D: "..tostring(dGain*dError))
       if cruiseSpeed > 0 then
         spinnerCmd = spinnerTrim - spinnerOffset
