@@ -71,10 +71,10 @@ function alignVehicle()
   alignError = dist2 - dist1
   actualDist = averageDist(dist1, dist2)
   if math.abs(alignError) > (alignThresh/100)*m2ft then
-    if pGain < 0 then -- Steering is flipped for this vehicle, need negative pGain
-      steeringOut = limitSteer(pMult*pGain*alignError, 0.25)
-    else
+    if pGain < 0 then -- Steering is flipped for this vehicle, need positive pGain
       steeringOut = limitSteer(pMult*-pGain*alignError, 0.25)
+    else
+      steeringOut = limitSteer(pMult*pGain*alignError, 0.25)
     end
     gcs:send_text(6, "FL: " .. tostring(dist1).." RL: "..tostring(dist2))
     gcs:send_text(6, "Steer: " .. tostring(steeringOut))
