@@ -56,6 +56,8 @@ local spinnerOffset = 365
 local spinnerTrim = 1500
 local spinnerCmd = spinnerTrim
 
+local noWallThresh = 10 -- Threshold for no wall detection to trigger stop
+
 vehicle:set_mode(rover_guided_mode_num)
 
 function averageDist(range1, range2)
@@ -160,7 +162,7 @@ function update()
     dError = (error - errorOld)/(updateRate/1000)
     steeringOut = limitSteer(pGain*error + dGain*dError, limSteer)
 
-    if (cruiseSpeed > 0 and distFwd > avoidThresh) or (cruiseSpeed < 0 and distBack > avoidThresh) then
+    if (cruiseSpeed > 0 and distFwd > avoidThresh) or (cruiseSpeed < 0 and distBack > avoidThresh) and (actualDist < noWallThresh) then
       gcs:send_text(6, "Steering Out " .. tostring(steeringOut) .. " P: " .. tostring(pGain*error).." D: "..tostring(dGain*dError))
       if cruiseSpeed > 0 then
         spinnerCmd = spinnerTrim - spinnerOffset
