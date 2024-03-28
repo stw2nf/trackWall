@@ -56,7 +56,7 @@ local spinnerOffset = 365
 local spinnerTrim = 1500
 local spinnerCmd = spinnerTrim
 
-local noWallThresh = 10 -- Threshold for no wall detection to trigger stop
+local noWallThresh = 3 -- Threshold for no wall detection to trigger stop
 
 vehicle:set_mode(rover_guided_mode_num)
 
