@@ -35,7 +35,7 @@ local limSteer = param:get('TRACK_STR') -- Steering limit
 local dGain = param:get('TRACK_D') -- Derivative Gain for Controller
 local avoidThresh = param:get('TRACK_OBS_DIST') -- Derivative Gain for Controller
 local dError = 0 -- Derivative of Error
-local alignThresh = 5 -- cm threshold
+local alignThresh = 1 -- cm threshold
 
 local speedRC = rc:find_channel_for_option(300)
 local directionRC = rc:find_channel_for_option(301)
