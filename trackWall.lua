@@ -2,6 +2,8 @@ local m2ft = 3.28
 
 local dist1
 local dist2
+local dist1_Old
+local dist2_Old
 local distBack
 local distFwd
 local alignError
@@ -57,6 +59,7 @@ local spinnerTrim = 1500
 local spinnerCmd = spinnerTrim
 
 local noWallThresh = 3 -- Threshold for no wall detection to trigger stop
+local blipThresh = 328 -- Threshold to use the last result to get rid
 
 vehicle:set_mode(rover_guided_mode_num)
 
@@ -66,8 +69,16 @@ function averageDist(range1, range2)
 end
 
 function alignVehicle()
+  dist1_Old = dist1
+  dist2_Old = dist2
   dist1 = ((rangefinder:distance_cm_orient(7)+rng1_offset)/100)*m2ft
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
+  if dist1 > blipThresh then
+    dist1 = dist1_Old
+  end
+  if dist2 > blipThresh then
+    dist2 = dist2_Old
+  end
   --dist1 = offsetDist
   --dist2 = offsetDist 
   alignError = dist2 - dist1
@@ -137,8 +148,16 @@ end
 
 function update()
   updateParams()
+  dist1_Old = dist1
+  dist2_Old = dist2
   dist1 = ((rangefinder:distance_cm_orient(7)+rng1_offset)/100)*m2ft
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
+  if dist1 > blipThresh then
+    dist1 = dist1_Old
+  end
+  if dist2 > blipThresh then
+    dist2 = dist2_Old
+  end
   --dist1 = offsetDist
   --dist2 = offsetDist 
 
