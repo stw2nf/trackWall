@@ -139,6 +139,10 @@ function updateParams()
     if dGain > 0 then
       param:set('TRACK_D', -dGain)
     end
+  else -- directionRC == 1
+    if directionRC_posOld~=directionRC_pos then
+      gcs:send_text(6, "Neutral")
+    end
   end
   pGain = param:get('TRACK_P')
   cruiseSpeed = param:get('TRACK_SP')
@@ -156,7 +160,6 @@ function update()
   distBack = ((rangefinder:distance_cm_orient(4))/100)*m2ft
   --distFwd = avoidThresh + 1
   --distBack = avoidThresh + 1
-  
   if arming:is_armed() == false then
     --gcs:send_text(6, "RNG FL: " .. tostring((dist1)).." RNG BL: "..tostring((dist2)).." RNG BACK: "..tostring((distBack)).." RNG FWD: "..tostring((distFwd)))
   end
@@ -170,7 +173,13 @@ function update()
     error = offsetDist - actualDist
     dError = (error - errorOld)/(updateRate/1000)
     steeringOut = limitSteer(pGain*error + dGain*dError, limSteer)
-
+    if directionRC_pos == 1 then
+      spinnerCmd = spinnerTrim
+      spinnerChannel:set_override(spinnerCmd)
+      vehicle:set_steering_and_throttle(0.0, 0.0)
+      gcs:send_text(6, "Vehicle waiting for direction")
+      return update, updateRate
+    end
     if (math.abs(dist1-dist2) > liveAlignThresh) and ((dist1 < noWallThresh) and (dist2 < noWallThresh)) then -- Live Align Trigger
       spinnerCmd = spinnerTrim
       spinnerChannel:set_override(spinnerCmd)
