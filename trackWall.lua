@@ -12,6 +12,8 @@ local errorOld = 0
 local rover_guided_mode_num = 15
 local steeringOut
 
+local liveAlignThresh = 0.62
+
 local PARAM_TABLE_KEY = 73
 
 assert(param:add_table(PARAM_TABLE_KEY, "TRACK_", 7), 'could not add param table') -- Track Wall parameter table 
@@ -168,7 +170,16 @@ function update()
     error = offsetDist - actualDist
     dError = (error - errorOld)/(updateRate/1000)
     steeringOut = limitSteer(pGain*error + dGain*dError, limSteer)
-    if (cruiseSpeed > 0 and distFwd > avoidThresh and actualDist < noWallThresh) or (cruiseSpeed < 0 and distBack > avoidThresh and actualDist < noWallThresh) then
+
+    if (math.abs(dist1-dist2) > liveAlignThresh) and ((dist1 < noWallThresh) and (dist2 < noWallThresh)) then -- Live Align Trigger
+      spinnerCmd = spinnerTrim
+      spinnerChannel:set_override(spinnerCmd)
+      vehicle:set_steering_and_throttle(0.0, 0.0)
+      gcs:send_text(6, "Live Align Triggered")
+      return alignVehicle, 100
+    end
+
+    if (cruiseSpeed > 0 and distFwd > avoidThresh and ((dist1 < noWallThresh) and (dist2 < noWallThresh))) or (cruiseSpeed < 0 and distBack > avoidThresh and ((dist1 < noWallThresh) and (dist2 < noWallThresh))) then
       gcs:send_text(6, "Actual Dist: " .. tostring((actualDist)))
       --gcs:send_text(6, "Steering Out " .. tostring(steeringOut) .. " P: " .. tostring(pGain*error).." D: "..tostring(dGain*dError))
       if cruiseSpeed > 0 then
