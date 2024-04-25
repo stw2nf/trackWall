@@ -52,11 +52,20 @@ local alignCmd = -0.18
 local rng1_offset = 0 -- offset in cm
 local rng2_offset = 0 -- offset in cm
 
-local spinnerChannel = rc:find_channel_for_option(301)
+local noWallThresh = 3 -- Threshold for no wall detection to trigger stop
+
+-- Relays for lights
+local frontLight = 0-- Front light for direction
+local rearLight = 1 -- Rear light for direction
+local flashLight = 2 -- Flashing beacon light while rover is armed 
+local initLight = 3 -- Green initialization light for ready
+
+local initTime = 30000 -- Time for wait for initialization
+
+local SCRIPT1 = 94
+local spinnerChannel = SRV_Channels:find_channel(SCRIPT1)
 local spinnerTrim = 1500
 local spinnerCmd = spinnerTrim
-
-local noWallThresh = 3 -- Threshold for no wall detection to trigger stop
 
 --vehicle:set_mode(rover_guided_mode_num)
 
@@ -69,10 +78,23 @@ function alignVehicle()
   dist1 = ((rangefinder:distance_cm_orient(7)+rng1_offset)/100)*m2ft
   dist2 = ((rangefinder:distance_cm_orient(5)+rng2_offset)/100)*m2ft
   --dist1 = offsetDist
-  --dist2 = offsetDist 
+  --dist2 = offsetDist
   alignError = dist2 - dist1
-  spinnerCmd = spinnerTrim
-  spinnerChannel:set_override(spinnerCmd)
+  spinnerCmd = math.floor(spinnerTrim)
+  SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, 2000)
+
+  relay:on(initLight)
+  relay:on(flashLight)
+  if directionRC_pos == 0 then
+    relay:on(frontLight)
+    relay:off(rearLight)
+  elseif directionRC_pos == 2 then
+    relay:on(rearLight)
+    relay:off(frontLight)
+  else
+    relay:off(frontLight)
+    relay:off(rearLight)
+  end
   if math.abs(alignError) > (alignThresh/100)*m2ft then
     gcs:send_text(6, "FL: " .. tostring(dist1).." RL: "..tostring(dist2))
     if alignError > 0 then
@@ -160,8 +182,12 @@ function update()
   distBack = ((rangefinder:distance_cm_orient(4))/100)*m2ft
   --distFwd = avoidThresh + 1
   --distBack = avoidThresh + 1
+  relay:on(initLight)
   if arming:is_armed() == false then
     --gcs:send_text(6, "RNG FL: " .. tostring((dist1)).." RNG BL: "..tostring((dist2)).." RNG BACK: "..tostring((distBack)).." RNG FWD: "..tostring((distFwd)))
+    relay:off(flashLight)
+  else
+    relay:on(flashLight)
   end
   if arming:is_armed() and vehicle:get_mode() == rover_guided_mode_num and startFlag == 0 then
     startFlag = 1
@@ -173,16 +199,25 @@ function update()
     error = offsetDist - actualDist
     dError = (error - errorOld)/(updateRate/1000)
     steeringOut = limitSteer(pGain*error + dGain*dError, limSteer)
-    if directionRC_pos == 1 then
-      spinnerCmd = spinnerTrim
-      spinnerChannel:set_override(spinnerCmd)
+    relay:on(flashLight)
+    if directionRC_pos == 0 then
+      relay:on(frontLight)
+      relay:off(rearLight)
+    elseif directionRC_pos == 2 then
+      relay:on(rearLight)
+      relay:off(frontLight)
+    else
+      relay:off(frontLight)
+      relay:off(rearLight)
+      spinnerCmd = math.floor(spinnerTrim)
+      SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
       vehicle:set_steering_and_throttle(0.0, 0.0)
       gcs:send_text(6, "Vehicle waiting for direction")
       return update, updateRate
     end
     if (math.abs(dist1-dist2) > liveAlignThresh) and ((dist1 < noWallThresh) and (dist2 < noWallThresh)) then -- Live Align Trigger
-      spinnerCmd = spinnerTrim
-      spinnerChannel:set_override(spinnerCmd)
+      spinnerCmd = math.floor(spinnerTrim)
+      SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
       vehicle:set_steering_and_throttle(0.0, 0.0)
       gcs:send_text(6, "Live Align Triggered")
       return alignVehicle, 100
@@ -192,35 +227,37 @@ function update()
       gcs:send_text(6, "Actual Dist: " .. tostring((actualDist)))
       --gcs:send_text(6, "Steering Out " .. tostring(steeringOut) .. " P: " .. tostring(pGain*error).." D: "..tostring(dGain*dError))
       if cruiseSpeed > 0 then
-        spinnerCmd = spinnerTrim - spinnerOffset*0.95
+        spinnerCmd = math.floor(spinnerTrim - spinnerOffset*0.95)
       else
-        spinnerCmd = spinnerTrim + spinnerOffset
+        spinnerCmd = math.floor(spinnerTrim + spinnerOffset)
       end
       --gcs:send_text(6, "Spinner Channel: "..tostring(spinnerChannel).." Set: "..tostring(spinnerCmd))
-      spinnerChannel:set_override(spinnerCmd)
+      SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
       vehicle:set_steering_and_throttle(steeringOut, cruiseSpeed)
     else
       spinnerCmd = spinnerTrim
       --gcs:send_text(6, "Spinner Channel: "..tostring(spinnerChannel).." Set: "..tostring(spinnerCmd))
-      spinnerChannel:set_override(spinnerCmd)
+      SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
       vehicle:set_steering_and_throttle(0.0, 0.0)
     end
     -- gcs:send_text(6, "Str" .. tostring(steeringOut) .. " Speed: " .. tostring(cruiseSpeed))
   else
     error = 0
     errorOld = 0
+    relay:off(frontLight)
+    relay:off(rearLight)
     -- Constantly override user input so that trim is set to 1500 on boot
-    spinnerCmd = spinnerTrim
-    spinnerChannel:set_override(spinnerCmd)
+    spinnerCmd = math.floor(spinnerTrim)
+    SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
     
     if startFlag == 1 then
-      spinnerCmd = spinnerTrim
+      spinnerCmd = math.floor(spinnerTrim)
       --gcs:send_text(6, "Spinner Channel: "..tostring(spinnerChannel).." Set: "..tostring(spinnerCmd))
-      spinnerChannel:set_override(spinnerCmd)
+      SRV_Channels:set_output_pwm_chan_timeout(spinnerChannel, spinnerCmd, updateRate)
     end
     startFlag = 0
   end
   return update, updateRate -- reschedules the loop
 end
 
-return update, 1000
+return update, initTime
